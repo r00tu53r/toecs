@@ -79,7 +79,7 @@ func main() {
 		fmt.Printf("unable to read data stream directory: %v\n", err)
 		os.Exit(1)
 	}
-	var fields []fieldsV1
+	var fields []fieldV1
 	for _, ds := range datastreams {
 		if ds.IsDir() {
 			log.Println("Processing data stream", ds.Name())
@@ -97,5 +97,9 @@ func main() {
 				}
 			}
 		}
+	}
+	log.Println("Flattened fields")
+	for i, f := range fields {
+		log.Printf("flattened[%d]: %v", i, f.Flatten())
 	}
 }

@@ -12,43 +12,44 @@ import (
 	"github.com/pkg/errors"
 )
 
-type fieldsV1 struct {
-	Name            string     `yaml:"name,omitempty"`
-	Type            string     `yaml:"type,omitempty"`
-	Description     string     `yaml:"description,omitempty"`
-	Value           string     `yaml:"value,omitempty"`
-	MetricType      string     `yaml:"metric_type,omitempty"`
-	Unit            string     `yaml:"unit,omitempty"`
-	Dimension       bool       `yaml:"dimension,omitempty"`
-	Pattern         string     `yaml:"pattern,omitempty"`
-	External        string     `yaml:"external,omitempty"`
-	DocValues       bool       `yaml:"doc_values,omitempty"`
-	Index           bool       `yaml:"index,omitempty"`
-	CopyTo          string     `yaml:"copy_to,omitempty"`
-	Enabled         bool       `yaml:"enabled,omitempty"`
-	Dynamic         bool       `yaml:"dynamic,omitempty"`
-	ScalingFactor   int        `yaml:"scaling_factor,omitempty"`
-	Analyzer        string     `yaml:"analyzer,omitempty"`
-	SearchAnalyzer  string     `yaml:"search_analyzer,omitempty"`
-	NullValue       string     `yaml:"null_value,omitempty"`
-	IgnoreAbove     int        `yml:"ignore_above,omitempty"`
-	ObjectType      string     `yaml:"object_type,omitempty"`
-	Path            string     `yaml:"path,omitempty"`
-	Normalizer      string     `yaml:"normalizer,omitempty"`
-	IncludeInParent bool       `yaml:"include_in_parent,omitempty"`
-	IncludeInRoot   bool       `yaml:"include_in_root,omitempty"`
-	Fields          []fieldsV1 `yaml:"fields,omitempty"`
-	MultiFields     []fieldsV1 `yaml:"multi_fields,omitempty"`
+type fieldV1 struct {
+	Name            string    `yaml:"name,omitempty"`
+	Type            string    `yaml:"type,omitempty"`
+	Description     string    `yaml:"description,omitempty"`
+	Value           string    `yaml:"value,omitempty"`
+	MetricType      string    `yaml:"metric_type,omitempty"`
+	Unit            string    `yaml:"unit,omitempty"`
+	Dimension       bool      `yaml:"dimension,omitempty"`
+	Pattern         string    `yaml:"pattern,omitempty"`
+	External        string    `yaml:"external,omitempty"`
+	DocValues       bool      `yaml:"doc_values,omitempty"`
+	Index           bool      `yaml:"index,omitempty"`
+	CopyTo          string    `yaml:"copy_to,omitempty"`
+	Enabled         bool      `yaml:"enabled,omitempty"`
+	Dynamic         bool      `yaml:"dynamic,omitempty"`
+	ScalingFactor   int       `yaml:"scaling_factor,omitempty"`
+	Analyzer        string    `yaml:"analyzer,omitempty"`
+	SearchAnalyzer  string    `yaml:"search_analyzer,omitempty"`
+	NullValue       string    `yaml:"null_value,omitempty"`
+	IgnoreAbove     int       `yml:"ignore_above,omitempty"`
+	ObjectType      string    `yaml:"object_type,omitempty"`
+	Path            string    `yaml:"path,omitempty"`
+	Normalizer      string    `yaml:"normalizer,omitempty"`
+	IncludeInParent bool      `yaml:"include_in_parent,omitempty"`
+	IncludeInRoot   bool      `yaml:"include_in_root,omitempty"`
+	Fields          []fieldV1 `yaml:"fields,omitempty"`
+	MultiFields     []fieldV1 `yaml:"multi_fields,omitempty"`
 	indent          int
 }
 
-func (field fieldsV1) String() string {
+func (field fieldV1) String() string {
 	spaces := strings.Repeat(" ", field.indent)
 	if field.Fields == nil {
 		return fmt.Sprintf("%sname: %s\n%stype: %s\n", spaces, field.Name, spaces, field.Type)
 	}
 	var s string
 	indent := field.indent + 2
+	s = fmt.Sprintf("%sname: %s\n%stype: %s\n", spaces, field.Name, spaces, field.Type)
 	for _, f := range field.Fields {
 		f.indent = indent
 		s += f.String()
@@ -56,8 +57,22 @@ func (field fieldsV1) String() string {
 	return s
 }
 
-func readFieldFile(path string) ([]fieldsV1, error) {
-	var fields []fieldsV1
+func (field fieldV1) Flatten() []string {
+	var s []string
+	if field.Fields == nil {
+		return []string{field.Name}
+	}
+	for _, f := range field.Fields {
+		s1 := f.Flatten()
+		for _, v := range s1 {
+			s = append(s, fmt.Sprintf("%s.%s", field.Name, v))
+		}
+	}
+	return s
+}
+
+func readFieldFile(path string) ([]fieldV1, error) {
+	var fields []fieldV1
 	fieldsFile, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -70,8 +85,8 @@ func readFieldFile(path string) ([]fieldsV1, error) {
 	return fields, nil
 }
 
-func readFieldFiles(packagePath string, datastream string) ([]fieldsV1, error) {
-	var retFields []fieldsV1
+func readFieldFiles(packagePath string, datastream string) ([]fieldV1, error) {
+	var retFields []fieldV1
 	fieldsPath := path.Join(packagePath, "data_stream", datastream, "fields")
 	files, err := ioutil.ReadDir(fieldsPath)
 	if err != nil {
