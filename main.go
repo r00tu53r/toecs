@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -37,7 +38,7 @@ func validPackage(packagePath string) error {
 
 // packageInfo returns the name, version and categories for
 // the given package path.
-func packageInfo(packagePath string) (string, string, []string, error) {
+func packageInfo(packagePath string) (string, string, error) {
 	var name string
 	var version string
 
@@ -59,10 +60,6 @@ func packageInfo(packagePath string) (string, string, []string, error) {
 	return name, version, nil
 }
 
-func readFields(packagePath string, datastream string) {
-	fieldsPath := path.Join(packagePath, datastream, "fields")
-}
-
 func main() {
 	flag.Parse()
 	if packagePath == "" {
@@ -77,15 +74,28 @@ func main() {
 	}
 	name, version, err := packageInfo(packagePath)
 	log.Printf("Package (%s), Version (%s)\n", name, version)
-	files, err := ioutil.ReadDir(path.Join(packagePath, "data_stream"))
+	datastreams, err := ioutil.ReadDir(path.Join(packagePath, "data_stream"))
 	if err != nil {
 		fmt.Printf("unable to read data stream directory: %v\n", err)
 		os.Exit(1)
 	}
-	for _, file := range files {
-		if file.IsDir() {
-			log.Println("Processing data stream", file.Name())
-			readFields(packagePath, file.Name())
+	var fields []fieldsV1
+	for _, ds := range datastreams {
+		if ds.IsDir() {
+			log.Println("Processing data stream", ds.Name())
+			fields, err = readFieldFiles(packagePath, ds.Name())
+			for {
+				err1 := errors.Unwrap(err)
+				if err1 == nil {
+					break
+				}
+				log.Println(err1)
+			}
+			if fields != nil {
+				for i, v := range fields {
+					log.Printf("field[%d]: %v", i, v)
+				}
+			}
 		}
 	}
 }
