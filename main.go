@@ -38,26 +38,30 @@ func validPackage(packagePath string) error {
 
 // packageInfo returns the name, version and categories for
 // the given package path.
-func packageInfo(packagePath string) (string, string, error) {
+func packageInfo(packagePath string) (string, string, []string, error) {
 	var name string
 	var version string
+	var categories []string
 
 	mFile, err := os.Open(path.Join(packagePath, "manifest.yml"))
 	if err != nil {
-		return name, version, fmt.Errorf("error opening manifest %v", err)
+		return name, version, categories, fmt.Errorf("error opening manifest %v", err)
 	}
 	defer mFile.Close()
 	mBytes, err := ioutil.ReadAll(mFile)
 	if err != nil {
-		return name, version, fmt.Errorf("error reading manifest %v", err)
+		return name, version, categories, fmt.Errorf("error reading manifest %v", err)
 	}
 	namePath, _ := yaml.PathString("$.name")
 	versionPath, _ := yaml.PathString("$.version")
+	catPath, _ := yaml.PathString("$.categories")
 	manifest := bytes.NewReader(mBytes)
 	namePath.Read(manifest, &name)
 	manifest.Seek(0, io.SeekStart)
 	versionPath.Read(manifest, &version)
-	return name, version, nil
+	manifest.Seek(0, io.SeekStart)
+	catPath.Read(manifest, &categories)
+	return name, version, categories, nil
 }
 
 func main() {
@@ -72,8 +76,8 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	name, version, err := packageInfo(packagePath)
-	log.Printf("Package (%s), Version (%s)\n", name, version)
+	name, version, categories, err := packageInfo(packagePath)
+	log.Printf("Package (%s), Version (%s), Categories: (%v)\n", name, version, categories)
 	datastreams, err := ioutil.ReadDir(path.Join(packagePath, "data_stream"))
 	if err != nil {
 		fmt.Printf("unable to read data stream directory: %v\n", err)
