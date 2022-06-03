@@ -15,10 +15,14 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-var packagePath string
+var (
+	packagePath string
+	ecsGitRef   string
+)
 
 func init() {
 	flag.StringVar(&packagePath, "package-path", "", "path to the integration package")
+	flag.StringVar(&ecsGitRef, "ecs-git-ref", "main", "git tag / branch on ECS repo")
 }
 
 func validPackage(packagePath string) error {
@@ -66,9 +70,10 @@ func packageInfo(packagePath string) (string, string, []string, error) {
 
 func main() {
 	flag.Parse()
-	if packagePath == "" {
-		_, usage := flag.UnquoteUsage(flag.Lookup("package-path"))
-		fmt.Printf("missing: %s\n", usage)
+	if packagePath == "" || ecsGitRef == "" {
+		_, packagePathUsage := flag.UnquoteUsage(flag.Lookup("package-path"))
+		_, gitRefUsage := flag.UnquoteUsage(flag.Lookup("ecs-git-ref"))
+		fmt.Printf("missing:\n%s\n%s\n", packagePathUsage, gitRefUsage)
 		os.Exit(1)
 	}
 	err := validPackage(packagePath)
@@ -105,5 +110,8 @@ func main() {
 	log.Println("Flattened fields")
 	for i, f := range fields {
 		log.Printf("flattened[%d]: %v", i, f.Flatten())
+	}
+	if err = cacheECSSchema(ecsGitRef); err != nil {
+		log.Fatalf("ECS caching error %v. Rerun the command", err)
 	}
 }
