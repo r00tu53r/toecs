@@ -88,6 +88,7 @@ func main() {
 		fmt.Printf("unable to read data stream directory: %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Println("Loading fields")
 	var fields []fieldV1
 	for _, ds := range datastreams {
 		if ds.IsDir() {
@@ -111,7 +112,13 @@ func main() {
 	for i, f := range fields {
 		log.Printf("flattened[%d]: %v", i, f.Flatten())
 	}
-	if err = cacheECSSchema(ecsGitRef); err != nil {
-		log.Fatalf("ECS caching error %v. Rerun the command", err)
+	fmt.Println("Loading ECS schema")
+	schema, err := loadECSSchema(ecsGitRef)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Schema loaded")
+	for k, v := range schema {
+		log.Printf("%s -> %v", k, v)
 	}
 }

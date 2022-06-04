@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/goccy/go-yaml"
 )
 
 var (
@@ -15,6 +18,45 @@ var (
 	ecsSchemaFile      = "ecs_flat.yml"
 	cachedECSSchemaDir = ".cache/toecs"
 )
+
+type ecsFlatField struct {
+	DashedName  string   `yaml:"dashed_name,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+	Example     string   `yaml:"example,omitempty"`
+	FlatName    string   `yaml:"flat_name,omitempty"`
+	Level       string   `yaml:"level,omitempty"`
+	Name        string   `yaml:"name,omitempty"`
+	Normalize   []string `yaml:"normalize,omitempty"`
+	Required    bool     `yaml:"required,omitempty"`
+	Short       string   `yaml:"short,omitempty"`
+	Type        string   `yaml:"type,omitempty"`
+}
+
+func loadECSSchema(ecsGitRef string) (map[string]ecsFlatField, error) {
+	var m map[string]ecsFlatField
+	err := cacheECSSchema(ecsGitRef)
+	if err != nil {
+		return nil, fmt.Errorf("error loading schema: %w", err)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("error loading schema: %w", err)
+	}
+	schemaPath := path.Join(home, cachedECSSchemaDir, ecsGitRef, ecsSchemaFile)
+	schemaFile, err := os.Open(schemaPath)
+	if err != nil {
+		return nil, fmt.Errorf("error loading schema: %w", err)
+	}
+	defer schemaFile.Close()
+	content, err := ioutil.ReadAll(schemaFile)
+	if err != nil {
+		return nil, fmt.Errorf("error loading schema: %w", err)
+	}
+	if err = yaml.Unmarshal(content, &m); err != nil {
+		return nil, fmt.Errorf("error loading schema: %w", err)
+	}
+	return m, nil
+}
 
 func cacheECSSchema(ecsGitRef string) error {
 	home, err := os.UserHomeDir()
